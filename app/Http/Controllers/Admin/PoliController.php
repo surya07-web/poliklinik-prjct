@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Admin\PoliController;
 use App\Http\Controllers\Controller;
 use App\Models\Poli;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 
 class PoliController extends Controller
 {
@@ -29,9 +27,9 @@ class PoliController extends Controller
         ]);
 
         Poli::create($validated);
+
         return redirect()->route('polis.index')
-            ->with('success', 'Poli berhasil di tambahkan')
-            ->with('type', 'success');
+            ->with('success', 'Poli berhasil ditambahkan');
     }
 
     public function edit($id)
@@ -51,7 +49,7 @@ class PoliController extends Controller
         $poli->update($validated);
 
         return redirect()->route('polis.index')
-            ->with('success', 'Polis berhasil di update');
+            ->with('success', 'Poli berhasil diupdate');
     }
 
     public function destroy($id)
@@ -60,6 +58,6 @@ class PoliController extends Controller
         $poli->delete();
 
         return redirect()->route('polis.index')
-            ->with('success', 'Polis berhasil di hapus !');
+            ->with('success', 'Poli berhasil dihapus');
     }
 }

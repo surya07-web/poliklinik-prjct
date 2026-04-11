@@ -88,4 +88,3 @@
 </body>
 
 </html>
-Menampilkan app.txt.

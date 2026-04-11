@@ -10,7 +10,7 @@ class Periksa extends Model
 
     protected $fillable = [
         'id_daftar_poli',
-        'tgl_periksa',
+        'tanggal_periksa',
         'catatan',
         'biaya_periksa',
     ];
@@ -20,8 +20,8 @@ class Periksa extends Model
         return $this->belongsTo(DaftarPoli::class, 'id_daftar_poli');
     }
 
-    public function detailPeriksas()
+    public function detailPeriksa()
     {
-        return $this->hasMany(DetailPeriksa::class, 'id_periksa');
+        return $this->hasMany(\App\Models\DetailPeriksa::class, 'id_periksa');
     }
 }

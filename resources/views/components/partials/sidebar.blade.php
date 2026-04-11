@@ -50,16 +50,32 @@
 
         <div class="space-y-1">
 
+            {{-- DASHBOARD --}}
             <a href="{{ route('admin.dashboard') }}"
                 class="{{ $baseLink }} {{ request()->routeIs('admin.dashboard') ? $active : $inactive }}">
                 <i class="fas fa-gauge-high w-4 text-center"></i>
                 Dashboard Admin
             </a>
 
-             <a href="{{ route('polis.index') }}"
-                class="{{ $baseLink }} {{ request()->routeIs('admin.dashboard') ? $active : $inactive }}">
-                <i class="fas fa-gauge-high w-4 text-center"></i>
+            {{-- POLI --}}
+            <a href="{{ route('polis.index') }}"
+                class="{{ $baseLink }} {{ request()->routeIs('polis.*') ? $active : $inactive }}">
+                <i class="fas fa-hospital w-4 text-center"></i>
                 Manajemen Poli
+            </a>
+
+            {{-- JADWAL --}}
+            <a href="{{ route('jadwal.index') }}"
+                class="{{ $baseLink }} {{ request()->routeIs('jadwal.*') ? $active : $inactive }}">
+                <i class="fas fa-calendar-days w-4 text-center"></i>
+                Manajemen Jadwal
+            </a>
+
+            {{-- OBAT (BARU 🔥) --}}
+            <a href="{{ route('obat.index') }}"
+                class="{{ $baseLink }} {{ request()->routeIs('obat.*') ? $active : $inactive }}">
+                <i class="fas fa-pills w-4 text-center"></i>
+                Manajemen Obat
             </a>
 
         </div>
@@ -81,8 +97,14 @@
                 Dashboard Pasien
             </a>
 
+            <a href="{{ route('pasien.riwayat') }}"
+                class="{{ $baseLink }} {{ request()->routeIs('pasien.riwayat') ? $active : $inactive }}">
+                <i class="fas fa-clock-rotate-left w-4 text-center"></i>
+                Riwayat Periksa
+            </a>
 
         </div>
+
         @endif
 
 

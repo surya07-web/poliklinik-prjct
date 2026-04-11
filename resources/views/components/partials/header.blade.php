@@ -59,4 +59,3 @@
     }
 }
 </script>
-Menampilkan header.txt.

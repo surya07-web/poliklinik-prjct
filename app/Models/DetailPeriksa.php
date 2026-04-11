@@ -20,6 +20,6 @@ class DetailPeriksa extends Model
 
     public function obat()
     {
-        return $this->belongsTo(Obat::class, 'id_obat');
+        return $this->belongsTo(\App\Models\Obat::class, 'id_obat');
     }
 }

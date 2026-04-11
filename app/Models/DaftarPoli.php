@@ -20,13 +20,13 @@ class DaftarPoli extends Model
         return $this->belongsTo(User::class, 'id_pasien');
     }
 
-    public function jadwalPeriksa()
+    public function jadwal()
     {
         return $this->belongsTo(JadwalPeriksa::class, 'id_jadwal');
     }
 
-    public function periksas()
+    public function periksa()
     {
-        return $this->hasMany(Periksa::class, 'id_daftar_poli');
+        return $this->hasOne(Periksa::class, 'id_daftar_poli');
     }
 }
