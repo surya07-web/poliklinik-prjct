@@ -71,11 +71,18 @@
                 Manajemen Jadwal
             </a>
 
-            {{-- OBAT (BARU 🔥) --}}
+            {{-- OBAT --}}
             <a href="{{ route('obat.index') }}"
                 class="{{ $baseLink }} {{ request()->routeIs('obat.*') ? $active : $inactive }}">
                 <i class="fas fa-pills w-4 text-center"></i>
                 Manajemen Obat
+            </a>
+
+            {{-- PEMBAYARAN 🔥 (BARU) --}}
+            <a href="{{ route('admin.pembayaran') }}"
+                class="{{ $baseLink }} {{ request()->routeIs('admin.pembayaran') ? $active : $inactive }}">
+                <i class="fas fa-money-check-dollar w-4 text-center"></i>
+                Verifikasi Pembayaran
             </a>
 
         </div>
@@ -91,22 +98,31 @@
 
         <div class="space-y-1">
 
+            {{-- DASHBOARD --}}
             <a href="{{ route('pasien.dashboard') }}"
                 class="{{ $baseLink }} {{ request()->routeIs('pasien.dashboard') ? $active : $inactive }}">
                 <i class="fas fa-house-medical w-4 text-center"></i>
                 Dashboard Pasien
             </a>
 
+            {{-- RIWAYAT --}}
             <a href="{{ route('pasien.riwayat') }}"
-                class="{{ $baseLink }} {{ request()->routeIs('pasien.riwayat') ? $active : $inactive }}">
+                class="{{ $baseLink }}
+                {{ request()->routeIs('pasien.riwayat') || request()->routeIs('pasien.detail') ? $active : $inactive }}">
                 <i class="fas fa-clock-rotate-left w-4 text-center"></i>
-                Riwayat Periksa
+                Riwayat Pendaftaran
+            </a>
+
+            {{-- PEMBAYARAN 🔥 --}}
+            <a href="{{ route('pasien.pembayaran') }}"
+                class="{{ $baseLink }} {{ request()->routeIs('pasien.pembayaran') ? $active : $inactive }}">
+                <i class="fas fa-money-bill-wave w-4 text-center"></i>
+                Pembayaran
             </a>
 
         </div>
 
         @endif
-
 
         {{-- ================= DOKTER ================= --}}
         @if(request()->is('dokter*'))

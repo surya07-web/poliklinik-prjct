@@ -39,7 +39,7 @@
     </div>
 
     <div class="text-center">
-        <h1 id="nomor-saya" class="text-5xl font-bold">
+        <h1 class="text-5xl font-bold">
             {{ $antrianAktif->no_antrian }}
         </h1>
         <p class="mt-2 text-sm opacity-80">Nomor Anda</p>
@@ -48,8 +48,9 @@
     <div class="mt-4 text-sm opacity-90 text-center">
         <p>Poli: <b>{{ $antrianAktif->jadwal?->poli?->nama }}</b></p>
         <p>Dokter: <b>{{ $antrianAktif->jadwal?->dokter?->name }}</b></p>
-        <p>Jadwal: 
-            <b>{{ $antrianAktif->jadwal?->hari }} | 
+        <p>
+            Jadwal:
+            <b>{{ $antrianAktif->jadwal?->hari }} |
             {{ $antrianAktif->jadwal?->jam_mulai }} - {{ $antrianAktif->jadwal?->jam_selesai }}</b>
         </p>
     </div>
@@ -101,6 +102,12 @@
 
             <tbody>
                 @forelse($jadwals as $i => $jadwal)
+
+                    @php
+                        // 🔥 PERBAIKAN UTAMA
+                        $sudahDaftar = $antrianAktif && $antrianAktif->id_jadwal == $jadwal->id;
+                    @endphp
+
                     <tr class="border-b hover:bg-gray-50">
 
                         <td class="py-3">{{ $i+1 }}</td>
@@ -114,7 +121,9 @@
                         </td>
 
                         <td class="text-center">
-                            @if($antrianAktif)
+
+                            {{-- 🔥 FIX: HANYA DISABLE JADWAL YANG SAMA --}}
+                            @if($sudahDaftar)
                                 <span class="text-xs px-3 py-1 bg-gray-100 text-gray-500 rounded">
                                     Sudah Terdaftar
                                 </span>
@@ -133,6 +142,7 @@
                                     </button>
                                 </form>
                             @endif
+
                         </td>
 
                     </tr>
@@ -151,56 +161,71 @@
 </div>
 
 
-{{-- 🔥 SCRIPT LIVE --}}
 @push('scripts')
 <script>
 
-// 🔴 LIVE ANTRIAN
-setInterval(async () => {
-    try {
-        const res = await fetch("{{ route('antrian.live') }}")
-        const data = await res.json()
+document.addEventListener('DOMContentLoaded', function () {
 
-        // global
-        document.getElementById('nomor-sekarang').innerText =
-            data?.no_antrian ?? '-'
+    window.Echo.channel('antrian')
+        .listen('.antrian.updated', (e) => {
 
-        document.getElementById('poli-sekarang').innerText =
-            data?.jadwal?.poli?.nama ?? '-'
+            console.log('Realtime masuk:', e);
 
-        document.getElementById('dokter-sekarang').innerText =
-            data?.jadwal?.dokter?.name ?? '-'
+            document.getElementById('nomor-sekarang').innerText =
+                e.no_antrian ?? '-';
 
-        // per jadwal
-        data.per_jadwal?.forEach(j => {
-            let el = document.getElementById('dipanggil-' + j.id)
-            if(el){
-                el.innerText = j.nomor ?? '-'
-            }
-        })
+            document.getElementById('poli-sekarang').innerText =
+                e.poli ?? '-';
 
-    } catch (err) {
-        console.log("error live antrian")
-    }
-}, 2000);
+            document.getElementById('dokter-sekarang').innerText =
+                e.dokter ?? '-';
+
+            e.per_jadwal.forEach(j => {
+
+                let el = document.getElementById('dipanggil-' + j.id);
+
+                if (el) {
+                    el.innerText = j.nomor ?? '-';
+                }
+
+            });
+
+        });
+
+});
 
 
-// 🕒 JAM LIVE
+// ================= JAM LIVE =================
 function updateJam() {
-    const now = new Date()
 
-    const hari = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"][now.getDay()]
-    const bulan = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Ags","Sep","Okt","Nov","Des"][now.getMonth()]
+    const now = new Date();
 
-    document.getElementById('live-jam').innerText =
-        now.toLocaleTimeString('id-ID')
+    const hari = [
+        "Minggu","Senin","Selasa","Rabu",
+        "Kamis","Jumat","Sabtu"
+    ][now.getDay()];
 
-    document.getElementById('live-tanggal').innerText =
-        `${hari}, ${now.getDate()} ${bulan} ${now.getFullYear()}`
+    const bulan = [
+        "Jan","Feb","Mar","Apr","Mei","Jun",
+        "Jul","Ags","Sep","Okt","Nov","Des"
+    ][now.getMonth()];
+
+    const jamEl = document.getElementById('live-jam');
+    const tanggalEl = document.getElementById('live-tanggal');
+
+    if(jamEl){
+        jamEl.innerText = now.toLocaleTimeString('id-ID');
+    }
+
+    if(tanggalEl){
+        tanggalEl.innerText =
+            `${hari}, ${now.getDate()} ${bulan} ${now.getFullYear()}`;
+    }
+
 }
 
-setInterval(updateJam, 1000)
-updateJam()
+setInterval(updateJam, 1000);
+updateJam();
 
 </script>
 @endpush

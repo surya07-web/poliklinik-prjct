@@ -29,7 +29,7 @@
                     </label>
                     <label class="input input-bordered flex items-center gap-3 w-full rounded-[10px] border-slate-200 bg-slate-50">
                         <i class="fas fa-user text-slate-400 text-[0.82rem]"></i>
-                        <input type="text" name="nama" value="{{ old('nama') }}"
+                        <input type="text" name="name" placeholder="Nama Lengkap"
                                placeholder="Masukkan nama lengkap..."
                                class="grow bg-transparent text-slate-800 text-[0.88rem]"
                                required>

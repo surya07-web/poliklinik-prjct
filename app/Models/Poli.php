@@ -17,4 +17,9 @@ class Poli extends Model
     {
         return $this->hasMany(User::class, 'id_poli');
     }
+
+    public function getNamaAttribute()
+    {
+        return $this->nama_poli;
+    }
 }

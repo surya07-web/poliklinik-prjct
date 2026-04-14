@@ -24,4 +24,9 @@ class Periksa extends Model
     {
         return $this->hasMany(\App\Models\DetailPeriksa::class, 'id_periksa');
     }
+
+    public function pembayaran()
+    {
+        return $this->hasOne(Pembayaran::class);
+    }
 }

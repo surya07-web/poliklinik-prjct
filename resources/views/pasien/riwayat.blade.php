@@ -1,71 +1,98 @@
-<x-layouts.app title="Riwayat Pasien">
+<x-layouts.app title="Riwayat Pendaftaran">
 
-<h2 class="mb-4">Riwayat Pemeriksaan</h2>
+<div class="max-w-6xl mx-auto">
 
-<div class="card p-3">
+    <h1 class="text-2xl font-bold mb-6 text-gray-800">
+        Riwayat Pendaftaran Poli
+    </h1>
 
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>No</th>
-            <th>Tanggal</th>
-            <th>Poli</th>
-            <th>Keluhan</th>
-            <th>Catatan</th>
-            <th>Obat</th>
-            <th>Total Biaya</th>
-        </tr>
-    </thead>
+    <div class="bg-white rounded-2xl shadow overflow-hidden">
 
-    <tbody>
-        @forelse($riwayat as $i => $r)
-        <tr>
-            <td>{{ $i + 1 }}</td>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
 
-            <td>
-                {{ $r->tanggal_periksa 
-                    ? \Carbon\Carbon::parse($r->tanggal_periksa)->format('d-m-Y') 
-                    : '-' }}
-            </td>
+                {{-- HEADER --}}
+                <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                    <tr>
+                        <th class="px-4 py-3">No</th>
+                        <th class="px-4 py-3">Poli</th>
+                        <th class="px-4 py-3">Dokter</th>
+                        <th class="px-4 py-3">Hari</th>
+                        <th class="px-4 py-3">No Antrian</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3 text-center">Aksi</th>
+                    </tr>
+                </thead>
 
-            <td>{{ $r->daftarPoli?->jadwal?->poli?->nama ?? '-' }}</td>
+                {{-- BODY --}}
+                <tbody class="divide-y">
 
-            <td>{{ $r->daftarPoli?->keluhan ?? '-' }}</td>
+                    @forelse($riwayats as $i => $r)
+                    <tr class="hover:bg-gray-50 transition">
 
-            <td>{{ $r->catatan ?? '-' }}</td>
+                        <td class="px-4 py-3 font-medium text-gray-700">
+                            {{ $i+1 }}
+                        </td>
 
-            {{-- OBAT --}}
-            <td>
-                @if($r->detailPeriksa->count())
-                    @foreach($r->detailPeriksa as $d)
-                        <div>
-                            {{ $d->obat->nama_obat }}
-                            (Rp {{ number_format($d->obat->harga, 0, ',', '.') }})
-                        </div>
-                    @endforeach
-                @else
-                    -
-                @endif
-            </td>
+                        <td class="px-4 py-3">
+                            {{ $r->jadwal->poli->nama }}
+                        </td>
 
-            {{-- TOTAL --}}
-            <td>
-                <b class="text-success">
-                    Rp {{ number_format($r->biaya_periksa ?? 0, 0, ',', '.') }}
-                </b>
-            </td>
-        </tr>
+                        <td class="px-4 py-3">
+                            {{ $r->jadwal->dokter->name }}
+                        </td>
 
-        @empty
-        <tr>
-            <td colspan="7" class="text-center">
-                Belum ada riwayat
-            </td>
-        </tr>
-        @endforelse
-    </tbody>
+                        <td class="px-4 py-3">
+                            {{ $r->jadwal->hari }}
+                        </td>
 
-</table>
+                        <td class="px-4 py-3 font-semibold">
+                            #{{ $r->no_antrian }}
+                        </td>
+
+                        {{-- STATUS --}}
+                        <td class="px-4 py-3">
+                            @if($r->periksa)
+                                <span class="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
+                                    Sudah Diperiksa
+                                </span>
+                            @else
+                                <span class="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-600">
+                                    Belum Diperiksa
+                                </span>
+                            @endif
+                        </td>
+
+                        {{-- AKSI --}}
+                        <td class="px-4 py-3 text-center">
+                            @if($r->periksa)
+                                <a href="{{ route('pasien.detail', $r->periksa->id) }}"
+                                   class="inline-block px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                    Detail
+                                </a>
+                            @else
+                                <span class="text-gray-400 text-xs italic">
+                                    -
+                                </span>
+                            @endif
+                        </td>
+
+                    </tr>
+                    @empty
+
+                    <tr>
+                        <td colspan="7" class="text-center text-gray-400 py-6">
+                            Belum ada riwayat pendaftaran
+                        </td>
+                    </tr>
+
+                    @endforelse
+
+                </tbody>
+            </table>
+        </div>
+
+    </div>
 
 </div>
 

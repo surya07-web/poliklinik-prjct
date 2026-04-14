@@ -8,6 +8,10 @@ use App\Models\DaftarPoli;
 use App\Models\Periksa;
 use App\Models\Obat;
 use App\Models\DetailPeriksa;
+use App\Models\Pembayaran;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Events\AntrianUpdated;
 
 class DokterController extends Controller
 {
@@ -18,7 +22,8 @@ class DokterController extends Controller
         $antrians = DaftarPoli::with([
             'pasien',
             'jadwal.poli',
-            'periksa.detailPeriksa.obat' // 🔥 penting untuk tampil obat
+            'jadwal.dokter',
+            'periksa.detailPeriksa.obat'
         ])
         ->whereHas('jadwal', function ($q) use ($user) {
             $q->where('id_dokter', $user->id);
@@ -29,30 +34,42 @@ class DokterController extends Controller
         return view('dokter.dashboard', compact('antrians'));
     }
 
+    // 🔥 PANGGIL PASIEN
     public function panggil($id)
     {
-        $antrian = DaftarPoli::with('jadwal')->findOrFail($id);
+        $antrian = DaftarPoli::with([
+            'jadwal.poli',
+            'jadwal.dokter'
+        ])->findOrFail($id);
 
-        // 🔒 Cegah akses dokter lain
         if ($antrian->jadwal->id_dokter != auth()->id()) {
             abort(403);
         }
 
-        // ❗ Cegah double panggil
-        if ($antrian->periksa) {
-            return redirect()->back()->with('error', 'Pasien sudah dipanggil');
+        if ($antrian->status === 'dipanggil') {
+            return back()->with('error', 'Pasien sudah dipanggil');
         }
 
-        Periksa::create([
-            'id_daftar_poli' => $antrian->id,
-            'tanggal_periksa' => now(), // ✅ WAJIB sesuai DB
+        // ✅ UPDATE STATUS
+        $antrian->update([
+            'status' => 'dipanggil'
         ]);
 
-        $antrian->touch(); // 🔥 update timestamp untuk antrian
+        // ✅ BUAT DATA PERIKSA (AWAL)
+        if (!$antrian->periksa) {
+            Periksa::create([
+                'id_daftar_poli' => $antrian->id,
+                'tanggal_periksa' => now(),
+            ]);
+        }
 
-        return redirect()->back()->with('success', 'Pasien dipanggil');
+        // 🔥 REALTIME
+        broadcast(new AntrianUpdated($antrian));
+
+        return back()->with('success', 'Pasien dipanggil');
     }
 
+    // 🔵 FORM PERIKSA
     public function formPeriksa($id)
     {
         $periksa = Periksa::with([
@@ -66,6 +83,7 @@ class DokterController extends Controller
         return view('dokter.periksa', compact('periksa', 'obats'));
     }
 
+    // 🔥 SIMPAN PEMERIKSAAN
     public function simpanPeriksa(Request $request, $id)
     {
         $request->validate([
@@ -75,71 +93,97 @@ class DokterController extends Controller
             'obat.*' => 'exists:obat,id',
         ]);
 
-        $periksa = Periksa::findOrFail($id);
+        DB::beginTransaction();
 
-        $totalObat = 0;
-        $selectedObats = [];
+        try {
+            $periksa = Periksa::with([
+                'daftarPoli.jadwal.poli',
+                'daftarPoli.jadwal.dokter'
+            ])->findOrFail($id);
 
-        // 🔥 ambil semua data obat sekali
-        foreach ($request->obat as $id_obat) {
-            $obat = Obat::findOrFail($id_obat);
-
-            // ❗ validasi stok
-            if ($obat->stok <= 0) {
-                return back()->with('error', 'Stok obat ' . $obat->nama_obat . ' habis!');
+            if ($periksa->detailPeriksa()->exists()) {
+                throw new \Exception("Pemeriksaan sudah pernah disimpan!");
             }
 
-            $totalObat += $obat->harga;
-            $selectedObats[] = $obat;
-        }
+            $totalObat = 0;
+            $selectedObats = [];
 
-        // 🔥 hitung total
-        $total = $request->biaya_periksa + $totalObat;
+            foreach ($request->obat as $id_obat) {
+                $obat = Obat::lockForUpdate()->findOrFail($id_obat);
 
-        // 🔥 hapus detail lama
-        DetailPeriksa::where('id_periksa', $periksa->id)->delete();
+                if ($obat->stok <= 0) {
+                    throw new \Exception("Stok obat {$obat->nama_obat} habis!");
+                }
 
-        // 🔥 simpan + kurangi stok
-        foreach ($selectedObats as $obat) {
-            DetailPeriksa::create([
-                'id_periksa' => $periksa->id,
-                'id_obat' => $obat->id,
+                $totalObat += $obat->harga;
+                $selectedObats[] = $obat;
+            }
+
+            $total = $request->biaya_periksa + $totalObat;
+
+            // SIMPAN DETAIL OBAT
+            foreach ($selectedObats as $obat) {
+                DetailPeriksa::create([
+                    'id_periksa' => $periksa->id,
+                    'id_obat' => $obat->id,
+                ]);
+
+                $obat->decrement('stok');
+            }
+
+            // UPDATE PERIKSA (SELESAI)
+            $periksa->update([
+                'catatan' => $request->catatan,
+                'biaya_periksa' => $total,
             ]);
 
-            $obat->decrement('stok');
+            // 🔥 UPDATE STATUS ANTRIAN JADI SELESAI
+            $periksa->daftarPoli->update([
+                'status' => 'selesai'
+            ]);
+
+            // PEMBAYARAN
+            if (!$periksa->pembayaran) {
+                Pembayaran::create([
+                    'periksa_id' => $periksa->id,
+                    'total_bayar' => $total,
+                    'status' => 'pending',
+                ]);
+            }
+
+            DB::commit();
+
+            // 🔥 REALTIME UPDATE
+            broadcast(new AntrianUpdated($periksa->daftarPoli));
+
+            return back()
+                ->with('success', 'Pemeriksaan berhasil disimpan')
+                ->with('done', true); // 🔥 ini penting
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return back()->with('error', $e->getMessage());
         }
-
-        // 🔥 update periksa
-        $periksa->update([
-            'catatan' => $request->catatan,
-            'biaya_periksa' => $total,
-        ]);
-
-        return redirect()->route('dokter.dashboard')
-            ->with('success', 'Pemeriksaan berhasil disimpan');
     }
 
+    // 🔵 RIWAYAT PASIEN
     public function riwayat($id_pasien)
     {
+        $user = auth()->user();
+
         $riwayats = DaftarPoli::with([
             'jadwal.poli',
             'periksa.detailPeriksa.obat'
         ])
         ->where('id_pasien', $id_pasien)
+        ->whereHas('jadwal', function ($q) use ($user) {
+            $q->where('id_dokter', $user->id);
+        })
         ->latest()
         ->get();
 
         return view('dokter.riwayat', compact('riwayats'));
-    }
-
-    public function struk($id)
-    {
-        $periksa = Periksa::with(
-            'daftarPoli.pasien',
-            'daftarPoli.jadwal.poli',
-            'detailPeriksa.obat'
-        )->findOrFail($id);
-
-        return view('dokter.struk', compact('periksa'));
     }
 }
