@@ -96,7 +96,7 @@
                     <th>Hari</th>
                     <th>Jam</th>
                     <th>Sedang Dilayani</th>
-                    <th class="text-center">Aksi</th>
+                    <th class="text-center">Keluhan</th>
                 </tr>
             </thead>
 

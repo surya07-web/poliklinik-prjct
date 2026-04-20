@@ -158,7 +158,7 @@ class DokterController extends Controller
 
             return back()
                 ->with('success', 'Pemeriksaan berhasil disimpan')
-                ->with('done', true); // 🔥 ini penting
+                ->with('done', true); // 🔥 ini penting 
 
         } catch (\Exception $e) {
 

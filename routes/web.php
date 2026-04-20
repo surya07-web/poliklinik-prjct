@@ -2,18 +2,22 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Pasien\PasienController;
+
+use App\Http\Controllers\Pasien\PasienController as PasienUserController;
+use App\Http\Controllers\Admin\PasienController as PasienAdminController;
+use App\Http\Controllers\Admin\DokterController as DokterAdminController;
+
 use App\Http\Controllers\Admin\PoliController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\JadwalController;
-use App\Http\Controllers\Dokter\DokterController;
+use App\Http\Controllers\Dokter\DokterController as DokterUserController;
 use App\Http\Controllers\AntrianDisplayController;
-use App\Models\DaftarPoli;
-use App\Models\JadwalPeriksa;
+
 use App\Http\Controllers\Pasien\PembayaranController;
 use App\Http\Controllers\Admin\PembayaranController as AdminPembayaranController;
 
 
+// ================= HOME =================
 Route::get('/', function () {
     return view('welcome');
 });
@@ -38,8 +42,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::resource('polis', PoliController::class);
     Route::resource('jadwal', JadwalController::class);
     Route::resource('obat', \App\Http\Controllers\Admin\ObatController::class);
+    Route::resource('dokter', DokterAdminController::class);
 
-    // 🔥 EXPORT
+    Route::resource('pasien', PasienAdminController::class);
+
+    // EXPORT
     Route::get('/export-dokter', [AdminController::class, 'exportDokter'])
         ->name('admin.export.dokter');
 
@@ -49,7 +56,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/export-obat', [AdminController::class, 'exportObat'])
         ->name('admin.export.obat');
 
-    // 🔥 PEMBAYARAN
+    // PEMBAYARAN
     Route::get('/pembayaran', [AdminPembayaranController::class, 'index'])
         ->name('admin.pembayaran');
 
@@ -62,59 +69,52 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 // ================= DOKTER =================
 Route::middleware(['auth', 'role:dokter'])->prefix('dokter')->group(function () {
 
-    Route::get('/dashboard', [DokterController::class, 'dashboard'])
+    Route::get('/dashboard', [DokterUserController::class, 'dashboard'])
         ->name('dokter.dashboard');
 
-    Route::post('/panggil/{id}', [DokterController::class, 'panggil'])
+    Route::post('/panggil/{id}', [DokterUserController::class, 'panggil'])
         ->name('dokter.panggil');
 
-    Route::get('/periksa/{id}', [DokterController::class, 'formPeriksa'])
+    Route::get('/periksa/{id}', [DokterUserController::class, 'formPeriksa'])
         ->name('dokter.periksa');
 
-    Route::post('/periksa/{id}', [DokterController::class, 'simpanPeriksa'])
+    Route::post('/periksa/{id}', [DokterUserController::class, 'simpanPeriksa'])
         ->name('dokter.periksa.simpan');
 
-    Route::get('/riwayat/{id}', [DokterController::class, 'riwayat'])
+    Route::get('/riwayat/{id}', [DokterUserController::class, 'riwayat'])
         ->name('dokter.riwayat');
 
-    Route::get('/struk/{id}', [DokterController::class, 'struk'])
-        ->name('dokter.struk'); 
+    Route::get('/struk/{id}', [DokterUserController::class, 'struk'])
+        ->name('dokter.struk');
 
-    Route::get('/riwayat/{id}', [DokterController::class, 'riwayat'])
-    ->name('dokter.riwayat');
+    Route::get('/export-jadwal', [DokterUserController::class, 'exportJadwal'])
+        ->name('dokter.export.jadwal');
 
-    Route::get('/export-jadwal', [DokterController::class, 'exportJadwal'])
-    ->name('dokter.export.jadwal');
-
-    Route::get('/export-riwayat', [DokterController::class, 'exportRiwayat'])
+    Route::get('/export-riwayat', [DokterUserController::class, 'exportRiwayat'])
         ->name('dokter.export.riwayat');
 
-    Route::post('/selesai/{id}', [DokterController::class, 'selesai'])
-    ->name('dokter.selesai');
-
-    Route::post('/dokter/periksa/{id}', [DokterController::class, 'simpanPeriksa'])
-    ->name('dokter.simpanPeriksa');
+    Route::post('/selesai/{id}', [DokterUserController::class, 'selesai'])
+        ->name('dokter.selesai');
 });
-
 
 // ================= PASIEN =================
 Route::middleware(['auth', 'role:pasien'])->prefix('pasien')->group(function () {
 
-    Route::get('/dashboard', [PasienController::class, 'dashboard'])
+    Route::get('/dashboard', [PasienUserController::class, 'dashboard'])
         ->name('pasien.dashboard');
 
-    Route::post('/daftar', [PasienController::class, 'daftar'])
+    Route::post('/daftar', [PasienUserController::class, 'daftar'])
         ->name('pasien.daftar');
 
-    Route::get('/riwayat', [PasienController::class, 'riwayat'])
+    Route::get('/riwayat', [PasienUserController::class, 'riwayat'])
         ->name('pasien.riwayat');
 
-    Route::get('/pasien/riwayat', [PasienController::class, 'riwayat'])->name('pasien.riwayat');
-    Route::get('/pasien/detail/{id}', [PasienController::class, 'detail'])->name('pasien.detail');
-    
+    Route::get('/detail/{id}', [PasienUserController::class, 'detail'])
+        ->name('pasien.detail');
 });
 
-// ================= PEMBAYARAN =================
+
+// ================= PEMBAYARAN PASIEN =================
 Route::middleware(['auth'])->prefix('pasien')->group(function () {
 
     Route::get('/pembayaran', [PembayaranController::class, 'index'])
@@ -125,15 +125,14 @@ Route::middleware(['auth'])->prefix('pasien')->group(function () {
 
 });
 
-// ================= API LIVE ANTRIAN (FINAL) =================
+
+// ================= API ANTRIAN =================
 Route::get('/antrian/live', function () {
 
-    // 🔴 AMBIL PERIKSA TERBARU (INI KUNCINYA)
     $periksa = \App\Models\Periksa::with('daftarPoli.jadwal.poli','daftarPoli.jadwal.dokter')
-        ->latest('created_at') // 🔥 pakai created_at periksa
+        ->latest('created_at')
         ->first();
 
-    // 🟢 PER JADWAL
     $perJadwal = \App\Models\JadwalPeriksa::with(['daftarPoli.periksa'])
         ->get()
         ->map(function($j){
@@ -158,6 +157,6 @@ Route::get('/antrian/live', function () {
 })->name('antrian.live');
 
 
-// ================= DISPLAY TV =================
+// ================= DISPLAY =================
 Route::get('/display', [AntrianDisplayController::class, 'index']);
 Route::get('/display/data', [AntrianDisplayController::class, 'data']);
