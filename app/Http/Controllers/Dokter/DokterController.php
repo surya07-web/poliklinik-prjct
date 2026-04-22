@@ -9,9 +9,14 @@ use App\Models\Periksa;
 use App\Models\Obat;
 use App\Models\DetailPeriksa;
 use App\Models\Pembayaran;
+use App\Models\JadwalPeriksa;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Events\AntrianUpdated;
+
+// 🔥 TAMBAHKAN INI
+use App\Exports\JadwalDokterExport;
+use App\Exports\RiwayatDokterExport;
 
 class DokterController extends Controller
 {
@@ -50,12 +55,10 @@ class DokterController extends Controller
             return back()->with('error', 'Pasien sudah dipanggil');
         }
 
-        // ✅ UPDATE STATUS
         $antrian->update([
             'status' => 'dipanggil'
         ]);
 
-        // ✅ BUAT DATA PERIKSA (AWAL)
         if (!$antrian->periksa) {
             Periksa::create([
                 'id_daftar_poli' => $antrian->id,
@@ -63,7 +66,6 @@ class DokterController extends Controller
             ]);
         }
 
-        // 🔥 REALTIME
         broadcast(new AntrianUpdated($antrian));
 
         return back()->with('success', 'Pasien dipanggil');
@@ -96,6 +98,7 @@ class DokterController extends Controller
         DB::beginTransaction();
 
         try {
+
             $periksa = Periksa::with([
                 'daftarPoli.jadwal.poli',
                 'daftarPoli.jadwal.dokter'
@@ -109,6 +112,7 @@ class DokterController extends Controller
             $selectedObats = [];
 
             foreach ($request->obat as $id_obat) {
+
                 $obat = Obat::lockForUpdate()->findOrFail($id_obat);
 
                 if ($obat->stok <= 0) {
@@ -123,6 +127,7 @@ class DokterController extends Controller
 
             // SIMPAN DETAIL OBAT
             foreach ($selectedObats as $obat) {
+
                 DetailPeriksa::create([
                     'id_periksa' => $periksa->id,
                     'id_obat' => $obat->id,
@@ -131,19 +136,20 @@ class DokterController extends Controller
                 $obat->decrement('stok');
             }
 
-            // UPDATE PERIKSA (SELESAI)
+            // UPDATE PERIKSA
             $periksa->update([
                 'catatan' => $request->catatan,
                 'biaya_periksa' => $total,
             ]);
 
-            // 🔥 UPDATE STATUS ANTRIAN JADI SELESAI
+            // UPDATE STATUS
             $periksa->daftarPoli->update([
                 'status' => 'selesai'
             ]);
 
             // PEMBAYARAN
             if (!$periksa->pembayaran) {
+
                 Pembayaran::create([
                     'periksa_id' => $periksa->id,
                     'total_bayar' => $total,
@@ -153,12 +159,11 @@ class DokterController extends Controller
 
             DB::commit();
 
-            // 🔥 REALTIME UPDATE
             broadcast(new AntrianUpdated($periksa->daftarPoli));
 
             return back()
                 ->with('success', 'Pemeriksaan berhasil disimpan')
-                ->with('done', true); // 🔥 ini penting 
+                ->with('done', true);
 
         } catch (\Exception $e) {
 
@@ -185,5 +190,49 @@ class DokterController extends Controller
         ->get();
 
         return view('dokter.riwayat', compact('riwayats'));
+    }
+
+    // 🔥 EXPORT JADWAL EXCEL
+    public function exportJadwal()
+    {
+        return Excel::download(
+            new JadwalDokterExport,
+            'jadwal-dokter.xlsx'
+        );
+    }
+
+    // 🔥 EXPORT RIWAYAT EXCEL
+    public function exportRiwayat()
+    {
+        return Excel::download(
+            new RiwayatDokterExport,
+            'riwayat-dokter.xlsx'
+        );
+    }
+
+    // 🔥 SELESAIKAN ANTRIAN
+    public function selesai($id)
+    {
+        $antrian = DaftarPoli::findOrFail($id);
+
+        $antrian->update([
+            'status' => 'selesai'
+        ]);
+
+        broadcast(new AntrianUpdated($antrian));
+
+        return back()->with('success', 'Antrian selesai');
+    }
+
+    // 🔥 CETAK STRUK
+    public function struk($id)
+    {
+        $periksa = Periksa::with([
+            'daftarPoli.pasien',
+            'detailPeriksa.obat',
+            'pembayaran'
+        ])->findOrFail($id);
+
+        return view('dokter.struk', compact('periksa'));
     }
 }
